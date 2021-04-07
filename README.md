@@ -1,0 +1,2 @@
+# BlazorSimpleServerApp
+Blazor playground
