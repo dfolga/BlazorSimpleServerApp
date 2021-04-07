@@ -1,0 +1,48 @@
+﻿@page "/datagrid2"
+@using BlazorSimpleServerApp.Data
+@using BlazorSimpleServerApp.Helpers
+@inject PdfDocumentService DocumentService
+@inject DialogService DialogService
+
+
+<h1>Data grid2</h1>
+<RadzenGrid AllowSorting="true" Data="@pdfs" TItem="PdfDocument" AllowColumnResize="true">
+    <Columns>
+        <RadzenGridColumn TItem="PdfDocument" Property="Id" Title="ID" />
+        <RadzenGridColumn TItem="PdfDocument" Context="data" Property="FileName" Title="FileName">
+            <Template>
+                <RadzenButton Text="@data.FileName" Click=@(args => ShowPdf(data.PdfPath)) ButtonStyle="ButtonStyle.Light" Style="margin-bottom: 20px; width: 200px" />
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn TItem="PdfDocument" Property="Date" Title="Date">
+        </RadzenGridColumn>
+    </Columns>
+</RadzenGrid>
+<br />
+<h2>Pages to remove:</h2>
+<RadzenTextBox Value="@pdfpages">
+
+</RadzenTextBox>
+<br />
+<RadzenButton Text="Show confirm dialog" Click=@(args => DialogService.Confirm("Are you sure?", "Confirm Deletion", new ConfirmOptions() { OkButtonText = "Yes", CancelButtonText = "No" })) ButtonStyle="ButtonStyle.Success">Approve</RadzenButton>
+@code {
+    private string pdfpages = "";
+    private PdfDocument[] pdfs;
+    protected override async Task OnInitializedAsync()
+    {
+        pdfs = await DocumentService.GetPdfDocumentsAsync();
+    }
+
+    async Task ShowPdf(string path)
+    {
+
+        await Task.FromResult(pdfpages = PdfPatternRecognitionTool.GetPagesWithPattern(path));
+        await DialogService.OpenAsync("Pdf Preview", ds =>
+    @<div>
+        <h3>Matching pattern: ***___*** founded on pages: @PdfPatternRecognitionTool.GetPagesWithPattern(@path)</h3>
+        <iframe src="/pdfs/Test.pdf" style="width:48vw; height:80vh"></iframe>
+    </div>
+    , new DialogOptions() { Width = $"{50}vw", Height = $"{95}vh" });
+    }
+}
+

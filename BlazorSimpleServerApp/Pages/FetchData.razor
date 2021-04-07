@@ -7,7 +7,7 @@
 
 <p>This component demonstrates fetching data from a service.</p>
 
-@if (forecasts == null)
+@*@if (forecasts == null)
 {
     <p><em>Loading...</em></p>
 }
@@ -34,8 +34,31 @@ else
             }
         </tbody>
     </table>
-}
-
+}*@
+<RadzenGrid AllowSorting="true" Data="@forecasts" TItem="WeatherForecast">
+    <Columns>
+        <RadzenGridColumn TItem="WeatherForecast" Context="data" Property="Date" Title="Date" Type="DateTime">
+            <Template>
+                @data.Date.ToShortDateString()
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn TItem="WeatherForecast" Context="data" Property="TemperatureC" Title="TemperatureC" Type="int">
+            <Template>
+                @data.TemperatureC
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn TItem="WeatherForecast" Context="data" Property="TemperatureF" Title="TemperatureF" Type="int">
+            <Template>
+                @data.TemperatureF
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn TItem="WeatherForecast" Context="data" Property="Summary" Title="Summary" Type="string">
+            <Template>
+                @data.Summary
+            </Template>
+        </RadzenGridColumn>
+    </Columns>
+</RadzenGrid>
 
 @code {
     private WeatherForecast[] forecasts;

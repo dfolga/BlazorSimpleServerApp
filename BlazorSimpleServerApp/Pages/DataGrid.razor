@@ -1,34 +1,34 @@
 ﻿@page "/datagrid"
 @using BlazorSimpleServerApp.Data
-@inject WeatherForecastService ForecastService
+@using BlazorSimpleServerApp.Helpers
+@inject PdfDocumentService DocumentService
+@inject DialogService DialogService
+
 
 <h1>Data grid</h1>
-
-<RadzenGrid AllowSorting="true" Data="@forecasts" TItem="WeatherForecast" AllowColumnResize="true">
+<RadzenGrid AllowSorting="true" Data="@pdfs" TItem="PdfDocument" AllowColumnResize="true">
     <Columns>
-        <RadzenGridColumn TItem="WeatherForecast" Context="data" Property="TemperatureC" Title="Id" >
+        <RadzenGridColumn TItem="PdfDocument" Property="Id" Title="ID" />
+        <RadzenGridColumn TItem="PdfDocument" Context="data" Property="FileName" Title="FileName">
             <Template>
-                @data.TemperatureC
+                <RadzenButton Text="@data.FileName" Click=@(args => ShowPdfDialog(data.PdfPath)) ButtonStyle="ButtonStyle.Light" Style="margin-bottom: 20px; width: 200px" />
             </Template>
         </RadzenGridColumn>
-        <RadzenGridColumn TItem="WeatherForecast" Context="data" Property="Summary" Title="File Name" Type="string">
-            <Template>
-                @data.Summary
-            </Template>
-        </RadzenGridColumn>
-        <RadzenGridColumn TItem="WeatherForecast" Context="data" Property="Date" Title="Date" Type="DateTime">
-            <Template>
-                @data.Date.ToShortDateString()
-            </Template>
+        <RadzenGridColumn TItem="PdfDocument" Property="Date" Title="Date">
         </RadzenGridColumn>
     </Columns>
 </RadzenGrid>
-
 @code {
-    private WeatherForecast[] forecasts;
-
+    private PdfDocument[] pdfs;
     protected override async Task OnInitializedAsync()
     {
-        forecasts = await ForecastService.GetForecastAsync(DateTime.Now);
+        pdfs = await DocumentService.GetPdfDocumentsAsync();
     }
+    async Task ShowPdfDialog(string path) => await DialogService.OpenAsync("Pdf Preview", ds =>
+    @<div>
+         <h3>Matching pattern: ***___*** founded on pages: @PdfPatternRecognitionTool.GetPagesWithPattern(@path)</h3>
+    <iframe src="/pdfs/Test.pdf" style="width:48vw; height:80vh"></iframe>
+</div>
+    , new DialogOptions() { Width = $"{50}vw", Height = $"{95}vh" });
 }
+
