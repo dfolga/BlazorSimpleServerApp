@@ -31,6 +31,7 @@ namespace BlazorSimpleServerApp
             services.AddSingleton<WeatherForecastService>();
             services.AddSingleton<PdfDocumentService>();
             services.AddScoped<DialogService>();
+            services.AddScoped<NotificationService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

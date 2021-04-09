@@ -19,14 +19,14 @@
     </Columns>
 </RadzenGrid>
 @code {
-    private PdfDocument[] pdfs;
+    private List<PdfDocument> pdfs;
     protected override async Task OnInitializedAsync()
     {
         pdfs = await DocumentService.GetPdfDocumentsAsync();
     }
     async Task ShowPdfDialog(string path) => await DialogService.OpenAsync("Pdf Preview", ds =>
     @<div>
-         <h3>Matching pattern: ***___*** founded on pages: @PdfPatternRecognitionTool.GetPagesWithPattern(@path)</h3>
+         <h3>Matching pattern: ***___*** founded on @path pages: @PdfPatternRecognitionTool.GetPagesWithPattern(@path)</h3>
     <iframe src="/pdfs/Test.pdf" style="width:48vw; height:80vh"></iframe>
 </div>
     , new DialogOptions() { Width = $"{50}vw", Height = $"{95}vh" });

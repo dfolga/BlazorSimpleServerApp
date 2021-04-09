@@ -14,7 +14,7 @@ namespace BlazorSimpleServerApp.Data
         {
             return new PdfDocument((string.Format("{0}", fsi.FullName)), fsi.GetHashCode(), fsi.Name, fsi.CreationTime);
         }
-        public Task<PdfDocument[]> GetPdfDocumentsAsync()
+        public Task<List<PdfDocument>> GetPdfDocumentsAsync()
         {
             var config = new Configuration().InitConfiguration();
             var dirPath = config.GetSection("DocumentsPath").Value;
@@ -25,7 +25,7 @@ namespace BlazorSimpleServerApp.Data
                 var doc = FillPdfDocumentAttributes(new FileInfo(path));
                 pdfDocuments.Add(doc);
             }
-            return Task.FromResult(pdfDocuments.ToArray());
+            return Task.FromResult(pdfDocuments);
         }
     }
 }

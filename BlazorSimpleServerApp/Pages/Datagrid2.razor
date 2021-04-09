@@ -3,15 +3,86 @@
 @using BlazorSimpleServerApp.Helpers
 @inject PdfDocumentService DocumentService
 @inject DialogService DialogService
+@inject NotificationService notificationService
 
 
 <h1>Data grid2</h1>
-<RadzenGrid AllowSorting="true" Data="@pdfs" TItem="PdfDocument" AllowColumnResize="true">
+
+@if (docsGrid != null && docsGrid.Visible == false)
+{<div>
+        <RadzenButton Click=@(args => BackToList()) ButtonStyle="ButtonStyle.Primary">Back to list</RadzenButton>
+        <h1 style="text-align:center;">Document: @fn</h1>
+    </div>
+
+    <RadzenTemplateForm @ref="textBox" Data="@attributes">
+        <div class="row">
+            <div class="col-md-6">
+                <RadzenFieldset Text="Document Info">
+                    <div class="row" style="margin:10px 0 10px 0;">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Account" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenTextBox @oninput=@(args => OnChange(args.Value.ToString())) @bind-Value="attributes.Account" style="width: 100%;"></RadzenTextBox>
+                        </div>
+                    </div>
+                    <div class="row" style="margin:10px 0 10px 0;">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Document type" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenDropDown @ref="dropDown" @bind-Value="attributes.DocumentType" AllowClear="true" Placeholder="Select something" Data="@types" style="width: 100%;" TextProperty="DocumentType" ValueProperty="DocumentType" Name="DocumentType">
+                            </RadzenDropDown>
+                        </div>
+                    </div>
+                    <div class="row" style="margin:10px 0 10px 0;">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Date" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenDatePicker DateFormat="MM'/'dd'/'yyyy" @ref="datePicker" style="width: 100%;" TValue="DateTime" @bind-Value="attributes.Date"></RadzenDatePicker>
+                        </div>
+                    </div>
+
+                    <div class="row" style="margin:10px 0 10px 0;">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Pages to remove" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenTextBox style="width: 100%;" Value="@pdfpages"></RadzenTextBox>
+                        </div>
+                    </div>
+                </RadzenFieldset>
+            </div>
+        </div>
+
+    </RadzenTemplateForm>
+    <div class="row">
+        <div class="col-md-8">
+            <h1 style="margin:10px 0 10px 0;">Title:  @String.Format("{0}-{1}-{2}.pdf", @attributes.DocumentType, @attributes.Date.ToString("MM'/'dd'/'yyyy"), @attributes.Account)</h1>
+        </div>
+        <div class="col-md-8">
+
+        </div>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-md-12 d-flex align-items-end justify-content-start" style="margin-top: 16px;">
+            <RadzenButton Click=@(args => Remove()) ButtonStyle="ButtonStyle.Success" Text="Approve">Approve</RadzenButton>
+        </div>
+    </div>
+
+}
+else
+{ <RadzenButton Click=@(args => Refresh()) ButtonStyle="ButtonStyle.Success">Refresh</RadzenButton>
+}
+
+
+<RadzenGrid @ref="docsGrid" AllowSorting="true" Data="@pdfs" TItem="PdfDocument" AllowColumnResize="true">
     <Columns>
         <RadzenGridColumn TItem="PdfDocument" Property="Id" Title="ID" />
         <RadzenGridColumn TItem="PdfDocument" Context="data" Property="FileName" Title="FileName">
             <Template>
-                <RadzenButton Text="@data.FileName" Click=@(args => ShowPdf(data.PdfPath)) ButtonStyle="ButtonStyle.Light" Style="margin-bottom: 20px; width: 200px" />
+                <RadzenButton Text="@data.FileName" Click=@(args => ShowPdf(data.PdfPath,data.FileName)) ButtonStyle="ButtonStyle.Light" Style="margin-bottom: 20px; width: 400px" />
             </Template>
         </RadzenGridColumn>
         <RadzenGridColumn TItem="PdfDocument" Property="Date" Title="Date">
@@ -19,30 +90,100 @@
     </Columns>
 </RadzenGrid>
 <br />
-<h2>Pages to remove:</h2>
-<RadzenTextBox Value="@pdfpages">
 
-</RadzenTextBox>
-<br />
-<RadzenButton Text="Show confirm dialog" Click=@(args => DialogService.Confirm("Are you sure?", "Confirm Deletion", new ConfirmOptions() { OkButtonText = "Yes", CancelButtonText = "No" })) ButtonStyle="ButtonStyle.Success">Approve</RadzenButton>
+<div class="row">
+    @if (@render != false)
+    {
+        <iframe src="@p.Replace("C:\\Users\\Folga\\source\\repos\\BlazorSimpleServerApp\\BlazorSimpleServerApp\\wwwroot","")" style="width:48vw; height:80vh; margin: 0 0 0 25px;"></iframe>
+    }
+</div>
+
+
 @code {
+    public class Attributes
+    {
+        public string Account { get; set; }
+        public DateTime Date { get; set; }
+        public int DocumentTypeId { get; set; }
+        public string DocumentType { get; set; }
+    }
+    public class DType
+    {
+        public int DocumentTypeId { get; set; }
+        public string DocumentType { get; set; }
+    }
+
+    List<DType> types = new List<DType>()
+{
+        new DType() { DocumentTypeId = 1, DocumentType = "Appraisal" },
+        new DType() { DocumentTypeId = 2, DocumentType = "General" },
+        new DType() { DocumentTypeId = 3, DocumentType = "Tax" },
+        new DType() { DocumentTypeId = 4, DocumentType = "Ad Hoc" }
+    };
+
+
+    Attributes attributes = new Attributes()
+    {
+        Date = DateTime.Now
+    };
+    void OnChange(string value)
+    {
+        attributes.Account = value;
+    }
+
+
+
     private string pdfpages = "";
-    private PdfDocument[] pdfs;
+    private List<PdfDocument> pdfs;
+    RadzenGrid<PdfDocument> docsGrid;
+    RadzenDropDown<string> dropDown;
+    RadzenDatePicker<DateTime> datePicker;
+    RadzenTemplateForm<Attributes> textBox;
+    private bool render = false;
+    private string p;
+    private string fn;
     protected override async Task OnInitializedAsync()
     {
         pdfs = await DocumentService.GetPdfDocumentsAsync();
     }
+    async Task Remove()
+    {
+        await Task.FromResult(pdfs.RemoveAll(s => s.PdfPath == p));
+        ShowNotification(new NotificationMessage() { Severity = NotificationSeverity.Success, Summary = "Pages to remove", Detail = "Successfully saved", Duration = 4000 });
+        await Task.FromResult(docsGrid.Reload());
+        await Task.FromResult(docsGrid.Visible = true);
+        await Task.FromResult(render = false);
+        dropDown.Reset();
+        textBox.Data.Account = "";
 
-    async Task ShowPdf(string path)
+    }
+    async Task ShowPdf(string path, string filename)
+    {
+        await Task.FromResult(docsGrid.Visible = false);
+        p = path;
+        fn = filename;
+        render = true;
+        await Task.FromResult(pdfpages = PdfPatternRecognitionTool.GetPagesWithPattern(path));
+    }
+    async Task Refresh()
     {
 
-        await Task.FromResult(pdfpages = PdfPatternRecognitionTool.GetPagesWithPattern(path));
-        await DialogService.OpenAsync("Pdf Preview", ds =>
-    @<div>
-        <h3>Matching pattern: ***___*** founded on pages: @PdfPatternRecognitionTool.GetPagesWithPattern(@path)</h3>
-        <iframe src="/pdfs/Test.pdf" style="width:48vw; height:80vh"></iframe>
-    </div>
-    , new DialogOptions() { Width = $"{50}vw", Height = $"{95}vh" });
+        await OnInitializedAsync();
+
     }
+    async Task BackToList()
+    {
+
+        await Task.FromResult(docsGrid.Visible = true);
+        render = false;
+        dropDown.Reset();
+        textBox.Data.Account = "";
+
+    }
+    void ShowNotification(NotificationMessage notificationMessage)
+    {
+        notificationService.Notify(notificationMessage);
+    }
+
 }
 
