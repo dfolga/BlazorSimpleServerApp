@@ -1,4 +1,5 @@
 ﻿using BlazorSimpleServerApp.Common;
+using Microsoft.AspNetCore.Hosting;
 using PdfSharp.Pdf.IO;
 using System;
 using System.Collections.Generic;
@@ -10,20 +11,31 @@ namespace BlazorSimpleServerApp.Data
 {
     public class PdfDocumentService
     {
+        public string DirectoryFromConfigFile { get; set; }
+        private readonly IWebHostEnvironment _hostingEnvironment;
+        public string WwwRootPath { get; set; }
+        public PdfDocumentService(IWebHostEnvironment hostingEnvironment) {
+            _hostingEnvironment = hostingEnvironment;
+        }
         static PdfDocument FillPdfDocumentAttributes(FileSystemInfo fsi)
         {
-            return new PdfDocument((string.Format("{0}", fsi.FullName)), fsi.GetHashCode(), fsi.Name, fsi.CreationTime);
+            return new PdfDocument(fsi.FullName, fsi.GetHashCode(), fsi.Name, fsi.CreationTime);
         }
         public Task<List<PdfDocument>> GetPdfDocumentsAsync()
         {
+            WwwRootPath = _hostingEnvironment.WebRootPath;
             var config = new Configuration().InitConfiguration();
             var dirPath = config.GetSection("DocumentsPath").Value;
-            var files = Directory.GetFiles(dirPath, "*.pdf");
-            List<PdfDocument> pdfDocuments=new List<PdfDocument>();
+            DirectoryFromConfigFile = dirPath;
+                var files = Directory.GetFiles(WwwRootPath + dirPath, "*.pdf");
+              List<PdfDocument> pdfDocuments = new List<PdfDocument>();
             foreach (var path in files)
             {
-                var doc = FillPdfDocumentAttributes(new FileInfo(path));
-                pdfDocuments.Add(doc);
+                if (File.Exists(path))
+                {
+                    var doc = FillPdfDocumentAttributes(new FileInfo(path));
+                    pdfDocuments.Add(doc);
+                }
             }
             return Task.FromResult(pdfDocuments);
         }

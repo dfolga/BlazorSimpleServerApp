@@ -4,70 +4,77 @@
 @inject PdfDocumentService DocumentService
 @inject DialogService DialogService
 @inject NotificationService notificationService
+@inject MoveAndMakeJsonService MoveMakeService
 
 
 <h1>Data grid2</h1>
 
-@if (docsGrid != null && docsGrid.Visible == false)
+@if (docsGrid != null && docsGridVisibility == false)
 {<div>
         <RadzenButton Click=@(args => BackToList()) ButtonStyle="ButtonStyle.Primary">Back to list</RadzenButton>
         <h1 style="text-align:center;">Document: @fn</h1>
     </div>
 
-    <RadzenTemplateForm @ref="textBox" Data="@attributes">
-        <div class="row">
+    <RadzenTemplateForm TItem="Attributes" @ref="textBox" Data="@attributes" Submit=@OnSubmit InvalidSubmit=@OnInvalidSubmit>
+        <div class="row" style="margin-bottom: 48px">
             <div class="col-md-6">
                 <RadzenFieldset Text="Document Info">
-                    <div class="row" style="margin:10px 0 10px 0;">
+                    <div class="row" style="margin-bottom: 48px">
                         <div class="col-md-4 align-items-center d-flex">
                             <RadzenLabel Text="Account" />
                         </div>
-                        <div class="col-md-8">
-                            <RadzenTextBox @oninput=@(args => OnChange(args.Value.ToString())) @bind-Value="attributes.Account" style="width: 100%;"></RadzenTextBox>
+                        <div class="col">
+                            <RadzenTextBox @oninput=@(args => OnChange(args.Value.ToString())) @bind-Value="attributes.Account" style="width: 100%; display:block;" Name="Account"></RadzenTextBox>
+                            <RadzenRequiredValidator Component="Account" Text="First name is required" Popup=true Style="position: absolute" />
                         </div>
                     </div>
-                    <div class="row" style="margin:10px 0 10px 0;">
+                    <div class="row" style="margin-bottom: 48px">
                         <div class="col-md-4 align-items-center d-flex">
                             <RadzenLabel Text="Document type" />
                         </div>
-                        <div class="col-md-8">
-                            <RadzenDropDown @ref="dropDown" @bind-Value="attributes.DocumentType" AllowClear="true" Placeholder="Select something" Data="@types" style="width: 100%;" TextProperty="DocumentType" ValueProperty="DocumentType" Name="DocumentType">
+                        <div class="col">
+                            <RadzenDropDown @ref="dropDown" @bind-Value="attributes.DocumentType" AllowClear="true" Placeholder="Select something" Data="@types" style="width: 100%; display:block;" TextProperty="DocumentType" ValueProperty="DocumentType" Name="DocumentType">
                             </RadzenDropDown>
+                            <RadzenRequiredValidator Component="DocumentType" Text="DocumentType is required" Popup="true" Style="position: absolute" />
                         </div>
                     </div>
-                    <div class="row" style="margin:10px 0 10px 0;">
+                    <div class="row" style="margin-bottom: 48px">
                         <div class="col-md-4 align-items-center d-flex">
                             <RadzenLabel Text="Date" />
                         </div>
-                        <div class="col-md-8">
+                        <div class="col">
                             <RadzenDatePicker DateFormat="MM'/'dd'/'yyyy" @ref="datePicker" style="width: 100%;" TValue="DateTime" @bind-Value="attributes.Date"></RadzenDatePicker>
                         </div>
                     </div>
 
-                    <div class="row" style="margin:10px 0 10px 0;">
+                    <div class="row" style="margin-bottom: 48px">
                         <div class="col-md-4 align-items-center d-flex">
                             <RadzenLabel Text="Pages to remove" />
                         </div>
-                        <div class="col-md-8">
-                            <RadzenTextBox style="width: 100%;" Value="@pdfpages"></RadzenTextBox>
+                        <div class="col">
+                            <RadzenTextBox style="width: 100%;" Value="@pdfpages" Name="PagesToRemove"></RadzenTextBox>
                         </div>
+                    </div>
+                    <div class="row" style="margin-bottom: 48px">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenButton ButtonStyle="ButtonStyle.Success" ButtonType="ButtonType.Submit" Text="Approve">Approve</RadzenButton>
+                        </div>
+
+                        @{if (noteFlag)
+                    {
+                        <div class="col">
+                         <h3>Director note: </h3>@attributes.Note
+                         </div>
+                    }
+                                }
                     </div>
                 </RadzenFieldset>
             </div>
         </div>
-
     </RadzenTemplateForm>
     <div class="row">
         <div class="col-md-8">
-            <h1 style="margin:10px 0 10px 0;">Title:  @String.Format("{0}-{1}-{2}.pdf", @attributes.DocumentType, @attributes.Date.ToString("MM'/'dd'/'yyyy"), @attributes.Account)</h1>
-        </div>
-        <div class="col-md-8">
-
-        </div>
-    </div>
-    <div class="row justify-content-center">
-        <div class="col-md-12 d-flex align-items-end justify-content-start" style="margin-top: 16px;">
-            <RadzenButton Click=@(args => Remove()) ButtonStyle="ButtonStyle.Success" Text="Approve">Approve</RadzenButton>
+            <h1 style="margin:10px 0 10px 0;">Title:  @String.Format("{0}-{1}-{2}.pdf", @attributes.DocumentType, @attributes.Date.ToString("MM''dd''yyyy"), @attributes.Account)</h1>
         </div>
     </div>
 
@@ -77,12 +84,12 @@ else
 }
 
 
-<RadzenGrid @ref="docsGrid" AllowSorting="true" Data="@pdfs" TItem="PdfDocument" AllowColumnResize="true">
+<RadzenGrid @ref="docsGrid" Visible=docsGridVisibility AllowSorting="true" Data="@pdfs" TItem="PdfDocument" AllowColumnResize="true">
     <Columns>
         <RadzenGridColumn TItem="PdfDocument" Property="Id" Title="ID" />
         <RadzenGridColumn TItem="PdfDocument" Context="data" Property="FileName" Title="FileName">
             <Template>
-                <RadzenButton Text="@data.FileName" Click=@(args => ShowPdf(data.PdfPath,data.FileName)) ButtonStyle="ButtonStyle.Light" Style="margin-bottom: 20px; width: 400px" />
+                <RadzenButton Text="@data.FileName" Click=@(args => ShowPdf(data.PdfPath, data.FileName)) ButtonStyle="ButtonStyle.Light" Style="margin-bottom: 20px; width: 400px" />
             </Template>
         </RadzenGridColumn>
         <RadzenGridColumn TItem="PdfDocument" Property="Date" Title="Date">
@@ -92,9 +99,10 @@ else
 <br />
 
 <div class="row">
-    @if (@render != false)
+    @if (render)
     {
-        <iframe src="@p.Replace("C:\\Users\\Folga\\source\\repos\\BlazorSimpleServerApp\\BlazorSimpleServerApp\\wwwroot","")" style="width:48vw; height:80vh; margin: 0 0 0 25px;"></iframe>
+        string sourceDir = DocumentService.DirectoryFromConfigFile + fn;
+        <iframe src="@sourceDir" style="width:48vw; height:80vh; margin: 0 0 0 25px;"></iframe>
     }
 </div>
 
@@ -102,10 +110,13 @@ else
 @code {
     public class Attributes
     {
+        public string OldFileName { get; set; }
+        public string NewFileName { get; set; }
         public string Account { get; set; }
         public DateTime Date { get; set; }
-        public int DocumentTypeId { get; set; }
         public string DocumentType { get; set; }
+        public string PagesToRemove { get; set; }
+        public string Note { get; set; }
     }
     public class DType
     {
@@ -130,40 +141,61 @@ else
     {
         attributes.Account = value;
     }
-
-
-
+    Attributes attributesFromJson = new Attributes();
+    private string wwwRootPath = "";
     private string pdfpages = "";
     private List<PdfDocument> pdfs;
     RadzenGrid<PdfDocument> docsGrid;
+    bool docsGridVisibility = true;
     RadzenDropDown<string> dropDown;
     RadzenDatePicker<DateTime> datePicker;
     RadzenTemplateForm<Attributes> textBox;
     private bool render = false;
     private string p;
     private string fn;
+    private bool noteFlag = false;
     protected override async Task OnInitializedAsync()
     {
         pdfs = await DocumentService.GetPdfDocumentsAsync();
+        wwwRootPath = DocumentService.WwwRootPath;
     }
-    async Task Remove()
+
+    void OnInvalidSubmit(FormInvalidSubmitEventArgs args)
+    {
+        ShowNotification(new NotificationMessage() { Severity = NotificationSeverity.Error, Summary = "Error", Detail = "Correct the errors in the form", Duration = 4000 });
+    }
+    async Task OnSubmit(Attributes attributes)
+    {
+        await Remove(attributes);
+    }
+    async Task Remove(Attributes attributes)
     {
         await Task.FromResult(pdfs.RemoveAll(s => s.PdfPath == p));
         ShowNotification(new NotificationMessage() { Severity = NotificationSeverity.Success, Summary = "Pages to remove", Detail = "Successfully saved", Duration = 4000 });
         await Task.FromResult(docsGrid.Reload());
-        await Task.FromResult(docsGrid.Visible = true);
+        await Task.FromResult(docsGridVisibility = true);
         await Task.FromResult(render = false);
-        dropDown.Reset();
-        textBox.Data.Account = "";
+        await Task.FromResult(attributes.PagesToRemove = pdfpages);
+        await Task.FromResult(attributes.OldFileName = fn);
+        await Task.FromResult(attributes.NewFileName = String.Format("{0}-{1}-{2}.pdf", attributes.DocumentType, attributes.Date.ToString("MM''dd''yyyy"), attributes.Account));
+        MoveMakeService.MoveAndMakeJson(attributes, wwwRootPath);
+        await Task.FromResult(textBox.Data.Account = "");
 
     }
     async Task ShowPdf(string path, string filename)
     {
-        await Task.FromResult(docsGrid.Visible = false);
-        p = path;
-        fn = filename;
-        render = true;
+        await Task.FromResult(docsGridVisibility = false);
+        await Task.FromResult(p = path);
+        await Task.FromResult(fn = filename);
+        await Task.FromResult(render = true);
         await Task.FromResult(pdfpages = PdfPatternRecognitionTool.GetPagesWithPattern(path));
+        @if (MoveMakeService.HasJson(fn,wwwRootPath))
+        {
+            noteFlag = true;
+            attributes = MoveMakeService.JsonExtract(fn, wwwRootPath);
+        }
+
+
     }
     async Task Refresh()
     {
@@ -173,11 +205,9 @@ else
     }
     async Task BackToList()
     {
-
-        await Task.FromResult(docsGrid.Visible = true);
-        render = false;
-        dropDown.Reset();
-        textBox.Data.Account = "";
+        await Task.FromResult(textBox.Data.Account = "");
+        await Task.FromResult(docsGridVisibility = true);
+        await Task.FromResult(render = false);
 
     }
     void ShowNotification(NotificationMessage notificationMessage)

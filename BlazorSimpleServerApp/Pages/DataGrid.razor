@@ -11,7 +11,7 @@
         <RadzenGridColumn TItem="PdfDocument" Property="Id" Title="ID" />
         <RadzenGridColumn TItem="PdfDocument" Context="data" Property="FileName" Title="FileName">
             <Template>
-                <RadzenButton Text="@data.FileName" Click=@(args => ShowPdfDialog(data.PdfPath)) ButtonStyle="ButtonStyle.Light" Style="margin-bottom: 20px; width: 200px" />
+                <RadzenButton Text="@data.FileName" Click=@(args => ShowPdfDialog(data.PdfPath,data.FileName)) ButtonStyle="ButtonStyle.Light" Style="margin-bottom: 20px; width: 200px" />
             </Template>
         </RadzenGridColumn>
         <RadzenGridColumn TItem="PdfDocument" Property="Date" Title="Date">
@@ -24,10 +24,11 @@
     {
         pdfs = await DocumentService.GetPdfDocumentsAsync();
     }
-    async Task ShowPdfDialog(string path) => await DialogService.OpenAsync("Pdf Preview", ds =>
+    async Task ShowPdfDialog(string path,string fileName) => await DialogService.OpenAsync("Pdf Preview", ds =>
     @<div>
-         <h3>Matching pattern: ***___*** founded on @path pages: @PdfPatternRecognitionTool.GetPagesWithPattern(@path)</h3>
-    <iframe src="/pdfs/Test.pdf" style="width:48vw; height:80vh"></iframe>
+    <h3>Matching pattern: ***___*** founded on pages: @PdfPatternRecognitionTool.GetPagesWithPattern(@path)</h3>
+    @{string sourceDir = DocumentService.DirectoryFromConfigFile + fileName;
+    <iframe src="@sourceDir" style="width:48vw; height:80vh"></iframe>}
 </div>
     , new DialogOptions() { Width = $"{50}vw", Height = $"{95}vh" });
 }

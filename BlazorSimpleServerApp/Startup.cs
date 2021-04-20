@@ -32,6 +32,8 @@ namespace BlazorSimpleServerApp
             services.AddSingleton<PdfDocumentService>();
             services.AddScoped<DialogService>();
             services.AddScoped<NotificationService>();
+            services.AddSingleton<MoveAndMakeJsonService>();
+            services.AddSingleton<DirectorDataService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -47,7 +49,7 @@ namespace BlazorSimpleServerApp
             }
 
             app.UseStaticFiles();
-
+            
             app.UseRouting();
 
             app.UseEndpoints(endpoints =>

@@ -5,13 +5,23 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="wwwroot\destinationDirectory\**" />
+    <Content Remove="wwwroot\destinationDirectory\**" />
+    <EmbeddedResource Remove="wwwroot\destinationDirectory\**" />
+    <None Remove="wwwroot\destinationDirectory\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="PdfSharp" Version="1.50.5147" />
     <PackageReference Include="Radzen.Blazor" Version="3.2.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\pdfs\" />
+    <Folder Include="wwwroot\director_pdfs\" />
+    <Folder Include="wwwroot\datagrid2_result\" />
+    <Folder Include="wwwroot\datagrid2_result_test\" />
+    <Folder Include="wwwroot\director_pdfs_test\" />
   </ItemGroup>
 
 </Project>
