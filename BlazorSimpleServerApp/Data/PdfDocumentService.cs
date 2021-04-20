@@ -27,17 +27,24 @@ namespace BlazorSimpleServerApp.Data
             var config = new Configuration().InitConfiguration();
             var dirPath = config.GetSection("DocumentsPath").Value;
             DirectoryFromConfigFile = dirPath;
-                var files = Directory.GetFiles(WwwRootPath + dirPath, "*.pdf");
-              List<PdfDocument> pdfDocuments = new List<PdfDocument>();
-            foreach (var path in files)
+            try
             {
-                if (File.Exists(path))
+                var files = Directory.GetFiles(WwwRootPath + dirPath, "*.pdf");
+                List<PdfDocument> pdfDocuments = new List<PdfDocument>();
+                foreach (var path in files)
                 {
-                    var doc = FillPdfDocumentAttributes(new FileInfo(path));
-                    pdfDocuments.Add(doc);
+                    if (File.Exists(path))
+                    {
+                        var doc = FillPdfDocumentAttributes(new FileInfo(path));
+                        pdfDocuments.Add(doc);
+                    }
                 }
+                return Task.FromResult(pdfDocuments);
             }
-            return Task.FromResult(pdfDocuments);
+            catch (Exception) {
+                return null;
+            }
+           
         }
     }
 }
