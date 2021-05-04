@@ -14,10 +14,14 @@
         <RadzenButton Click=@(args => BackToList()) ButtonStyle="ButtonStyle.Primary">Back to list</RadzenButton>
         <h1 style="text-align:center;">Document: @fn</h1>
     </div>
-
-    <RadzenTemplateForm TItem="Attributes" @ref="textBox" Data="@attributes" Submit=@OnSubmit InvalidSubmit=@OnInvalidSubmit>
-        <div class="row" style="margin-bottom: 48px">
-            <div class="col-md-6">
+    <div class="row" style="margin-bottom: 48px">
+        <div class="col">
+            <div class="row">
+                <div class="col">
+                    <h1 style="margin:10px 0 10px 0;">Title:  @String.Format("{0}-{1}-{2}.pdf", @attributes.DocumentType, @attributes.Date.ToString("MM''dd''yyyy"), @attributes.Account)</h1>
+                </div>
+            </div>
+            <RadzenTemplateForm TItem="Attributes" @ref="textBox" Data="@attributes" Submit=@OnSubmit InvalidSubmit=@OnInvalidSubmit>
                 <RadzenFieldset Text="Document Info">
                     <div class="row" style="margin-bottom: 48px">
                         <div class="col-md-4 align-items-center d-flex">
@@ -52,31 +56,38 @@
                             <RadzenLabel Text="Pages to remove" />
                         </div>
                         <div class="col">
-                            <RadzenTextBox style="width: 100%;" Value="@pdfpages" Name="PagesToRemove"></RadzenTextBox>
+                            <RadzenTextBox style="width: 100%;" @bind-Value="@pdfpages" Name="PagesToRemove"></RadzenTextBox>
                         </div>
                     </div>
                     <div class="row" style="margin-bottom: 48px">
                         <div class="col-md-4 align-items-center d-flex">
                             <RadzenButton ButtonStyle="ButtonStyle.Success" ButtonType="ButtonType.Submit" Text="Approve">Approve</RadzenButton>
+
                         </div>
 
                         @{if (noteFlag)
-                    {
-                        <div class="col">
-                         <h3>Director note: </h3>@attributes.Note
-                         </div>
-                    }
-                                }
+                            {
+                                <div class="col">
+                                    <h3>Director note: </h3>@attributes.Note
+                                </div>
+                            }
+                        }
                     </div>
                 </RadzenFieldset>
-            </div>
+
+
+            </RadzenTemplateForm>
+
         </div>
-    </RadzenTemplateForm>
-    <div class="row">
-        <div class="col-md-8">
-            <h1 style="margin:10px 0 10px 0;">Title:  @String.Format("{0}-{1}-{2}.pdf", @attributes.DocumentType, @attributes.Date.ToString("MM''dd''yyyy"), @attributes.Account)</h1>
+        <div class="col">
+            @if (render)
+            {
+                string sourceDir = String.Concat(DocumentService.DirectoryFromConfigFile, fn);
+                <iframe src="@sourceDir" style="width:48vw; height:75vh;"></iframe>
+            }
         </div>
     </div>
+
 
 }
 else
@@ -84,27 +95,22 @@ else
 }
 
 
+
 <RadzenGrid @ref="docsGrid" Visible=docsGridVisibility AllowSorting="true" Data="@pdfs" TItem="PdfDocument" AllowColumnResize="true">
     <Columns>
-        <RadzenGridColumn TItem="PdfDocument" Property="Id" Title="ID" />
+        <RadzenGridColumn TItem="PdfDocument" Property="Id" Title="ID" Width="250px" />
         <RadzenGridColumn TItem="PdfDocument" Context="data" Property="FileName" Title="FileName">
             <Template>
-                <RadzenButton Text="@data.FileName" Click=@(args => ShowPdf(data.PdfPath, data.FileName)) ButtonStyle="ButtonStyle.Light" Style="margin-bottom: 20px; width: 400px" />
+                <RadzenButton Text="@data.FileName" Click=@(args => ShowPdf(data.PdfPath, data.FileName)) ButtonStyle="ButtonStyle.Light" Style="margin-top: 10px; margin-bottom:10px ;width: 100%" />
             </Template>
         </RadzenGridColumn>
-        <RadzenGridColumn TItem="PdfDocument" Property="Date" Title="Date">
+        <RadzenGridColumn TItem="PdfDocument" Property="Date" Title="Date" Width="250px">
         </RadzenGridColumn>
     </Columns>
 </RadzenGrid>
 <br />
 
-<div class="row">
-    @if (render)
-    {
-        string sourceDir = DocumentService.DirectoryFromConfigFile + fn;
-        <iframe src="@sourceDir" style="width:48vw; height:80vh; margin: 0 0 0 25px;"></iframe>
-    }
-</div>
+
 
 
 @code {
@@ -132,7 +138,6 @@ else
         new DType() { DocumentTypeId = 4, DocumentType = "Ad Hoc" }
     };
 
-
     Attributes attributes = new Attributes()
     {
         Date = DateTime.Now
@@ -144,6 +149,7 @@ else
     Attributes attributesFromJson = new Attributes();
     private string wwwRootPath = "";
     private string pdfpages = "";
+    private string costam;
     private List<PdfDocument> pdfs;
     RadzenGrid<PdfDocument> docsGrid;
     bool docsGridVisibility = true;
@@ -164,12 +170,54 @@ else
     {
         ShowNotification(new NotificationMessage() { Severity = NotificationSeverity.Error, Summary = "Error", Detail = "Correct the errors in the form", Duration = 4000 });
     }
+
+
     async Task OnSubmit(Attributes attributes)
     {
-        await Remove(attributes);
+        var newFileName = String.Format("{0}-{1}-{2}.pdf", attributes.DocumentType, attributes.Date.ToString("MM''dd''yyyy"), attributes.Account);
+        if ((MoveMakeService.FileAlreadyExists(wwwRootPath, newFileName)))
+        {
+            var result = await DialogService.OpenAsync("Duplicate Box", ds =>
+    @<div>
+        <h1 Style="margin-bottom: 1rem">Moving service is not active. File with this name already exist.</h1>
+        <h2 Style="margin-bottom: 1rem">Click confirm to make file with date prefix.</h2>
+        <div class="row">
+            <div class="col">
+                <RadzenButton Text="Confirm" Click="() => ds.Close(true)" ButtonStyle="ButtonStyle.Success" Style="margin-bottom: 10px; width: 150px" />
+                <RadzenButton Text="Cancel" Click="() => ds.Close(false)" ButtonStyle="ButtonStyle.Secondary" Style="margin-bottom: 10px; width: 150px" />
+
+            </div>
+        </div>
+    </div>);
+            if (result) {
+                await RemoveDuplicate(attributes);
+            }
+        }
+        else
+            await Remove(attributes);
     }
+
+
+    async Task RemoveDuplicate(Attributes attributes)
+    {
+
+        await Task.FromResult(pdfs.RemoveAll(s => s.PdfPath == p));
+        ShowNotification(new NotificationMessage() { Severity = NotificationSeverity.Success, Summary = "Pages to remove", Detail = "Successfully saved", Duration = 4000 });
+        await Task.FromResult(docsGrid.Reload());
+        await Task.FromResult(docsGridVisibility = true);
+        await Task.FromResult(render = false);
+        await Task.FromResult(attributes.PagesToRemove = pdfpages);
+        await Task.FromResult(attributes.OldFileName = fn);
+        await Task.FromResult(attributes.NewFileName = String.Format("{0}-{1}-{2}-{3}.pdf", DateTime.Now.ToString("yyyy.MM.dd.THH.mm.ss.fff.tt"), attributes.DocumentType, attributes.Date.ToString("MM''dd''yyyy"), attributes.Account));
+        MoveMakeService.RemoveRedundantJsonFile((String.Format("{0}-{1}-{2}.json", attributes.DocumentType, attributes.Date.ToString("MM''dd''yyyy"), attributes.Account)), wwwRootPath);
+        MoveMakeService.MoveAndMakeJson(attributes, wwwRootPath);
+        await Task.FromResult(textBox.Data.Account = "");
+
+    }
+
     async Task Remove(Attributes attributes)
     {
+
         await Task.FromResult(pdfs.RemoveAll(s => s.PdfPath == p));
         ShowNotification(new NotificationMessage() { Severity = NotificationSeverity.Success, Summary = "Pages to remove", Detail = "Successfully saved", Duration = 4000 });
         await Task.FromResult(docsGrid.Reload());
@@ -178,6 +226,7 @@ else
         await Task.FromResult(attributes.PagesToRemove = pdfpages);
         await Task.FromResult(attributes.OldFileName = fn);
         await Task.FromResult(attributes.NewFileName = String.Format("{0}-{1}-{2}.pdf", attributes.DocumentType, attributes.Date.ToString("MM''dd''yyyy"), attributes.Account));
+        MoveMakeService.RemoveRedundantJsonFile((String.Format("{0}-{1}-{2}.json", attributes.DocumentType, attributes.Date.ToString("MM''dd''yyyy"), attributes.Account)), wwwRootPath);
         MoveMakeService.MoveAndMakeJson(attributes, wwwRootPath);
         await Task.FromResult(textBox.Data.Account = "");
 
@@ -189,31 +238,31 @@ else
         await Task.FromResult(fn = filename);
         await Task.FromResult(render = true);
         await Task.FromResult(pdfpages = PdfPatternRecognitionTool.GetPagesWithPattern(path));
-        @if (MoveMakeService.HasJson(fn,wwwRootPath))
-        {
-            noteFlag = true;
-            attributes = MoveMakeService.JsonExtract(fn, wwwRootPath);
-        }
+@if (MoveMakeService.HasJson(fn, wwwRootPath))
+{
+    noteFlag = true;
+    attributes = MoveMakeService.JsonExtract(fn, wwwRootPath);
+}
 
 
-    }
-    async Task Refresh()
-    {
+}
+async Task Refresh()
+{
 
-        await OnInitializedAsync();
+await OnInitializedAsync();
 
-    }
-    async Task BackToList()
-    {
-        await Task.FromResult(textBox.Data.Account = "");
-        await Task.FromResult(docsGridVisibility = true);
-        await Task.FromResult(render = false);
+}
+async Task BackToList()
+{
+await Task.FromResult(textBox.Data.Account = "");
+await Task.FromResult(docsGridVisibility = true);
+await Task.FromResult(render = false);
 
-    }
-    void ShowNotification(NotificationMessage notificationMessage)
-    {
-        notificationService.Notify(notificationMessage);
-    }
+}
+void ShowNotification(NotificationMessage notificationMessage)
+{
+notificationService.Notify(notificationMessage);
+}
 
 }
 

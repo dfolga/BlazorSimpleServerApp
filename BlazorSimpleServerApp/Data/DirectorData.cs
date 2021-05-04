@@ -13,5 +13,7 @@ namespace BlazorSimpleServerApp.Data
         public DateTime Date { get; set; }
         public string DocumentType { get; set; }
         public string PagesToRemove { get; set; }
+
+        public string Note { get; set; }
     }
 }

@@ -24,20 +24,20 @@
         </RadzenGridColumn>
         <RadzenGridColumn TItem="DirectorData" Context="data" Property="NewFileName" Title="Note">
             <Template>
-                <RadzenTextArea @bind-Value="@note" Placeholder="Enter note here..."></RadzenTextArea>
+                <RadzenTextArea @bind-Value="@data.Note" Placeholder="Enter note here..."></RadzenTextArea>
             </Template>
         </RadzenGridColumn>
         <RadzenGridColumn TItem="DirectorData" Context="data" Property="NewFileName" Title="Reject Option">
             <Template>
-                <RadzenButton ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Medium" Click="@(args => UpdateJson(data.NewFileName,note))"> Reject</RadzenButton>
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Medium" Click="@(args => UpdateJson(data.NewFileName,data.Note))"> Reject</RadzenButton>
             </Template>
         </RadzenGridColumn>
 
     </Columns>
     </RadzenGrid>
+
 @code {
     RadzenGrid<DirectorData> directorGrid;
-    string note;
     List<DirectorData> directorDatas = new List<DirectorData>();
     protected override async Task OnInitializedAsync()
     {
@@ -48,6 +48,5 @@
         directorDatas.RemoveAll(s => s.NewFileName == fileName);
         directorGrid.Reload();
         DirectorService.UpdateJson(fileName,note);
-        note="";
     }
 }

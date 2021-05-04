@@ -1,10 +1,4 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
 using Topshelf;
 
 namespace MovingFilesService
@@ -25,7 +19,7 @@ namespace MovingFilesService
                 });
 
                 x.RunAsLocalSystem();
-               
+
                 x.SetServiceName("MovingService");
                 x.SetDisplayName("MovingService");
                 x.SetDescription("This is a service which is moving files.");

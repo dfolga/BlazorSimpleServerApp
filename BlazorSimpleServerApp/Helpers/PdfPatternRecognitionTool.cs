@@ -6,14 +6,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BlazorSimpleServerApp.Common;
 
 namespace BlazorSimpleServerApp.Helpers
 {
     public class PdfPatternRecognitionTool
     {
+            
             public static string GetPagesWithPattern(string path)
             {
-                string pattern = "***___***";
+            var config = new Configuration().InitConfiguration();
+            string pattern = config.GetSection("PatternToBeSearched").Value;
                 List<int> result=new List<int>();
                 PdfDocument inputDocument = PdfReader.Open(path, PdfDocumentOpenMode.Import);
                 for (int i = 0; i < inputDocument.PageCount; i++)

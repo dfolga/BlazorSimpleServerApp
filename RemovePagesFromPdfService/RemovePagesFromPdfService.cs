@@ -3,12 +3,11 @@ using NLog;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
+using System.Dynamic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
+using System.Timers;
 
 namespace RemovePagesFromPdfAndMoveService
 {
@@ -18,13 +17,16 @@ namespace RemovePagesFromPdfAndMoveService
         private string DestinationDirectory { get; set; }
         private static Logger logger = LogManager.GetCurrentClassLogger();
         public string FilterFileType { get; set; }
-
+        private System.Timers.Timer _timer;
+        private static object s_lock = new object();
+        public double timerIntervalInMs { get; set; }
         public RemovePagesFromPdfAndMoveService()
         {
             SourceDirectory = ConfigurationManager.AppSettings["sourceDirectory"];
             DestinationDirectory = ConfigurationManager.AppSettings["destinationDirectory"];
             FilterFileType = ConfigurationManager.AppSettings["filterFileType"];
-            if (string.IsNullOrEmpty(SourceDirectory) || string.IsNullOrEmpty(DestinationDirectory) || string.IsNullOrEmpty(FilterFileType))
+            timerIntervalInMs = Double.Parse(ConfigurationManager.AppSettings["timerIntervalInMs"]);
+            if (string.IsNullOrEmpty(SourceDirectory) || string.IsNullOrEmpty(DestinationDirectory) || string.IsNullOrEmpty(FilterFileType) || string.IsNullOrEmpty(ConfigurationManager.AppSettings["timerIntervalInMs"]))
             {
                 logger.Info("Missing config arguments");
             }
@@ -33,135 +35,57 @@ namespace RemovePagesFromPdfAndMoveService
         public void Start()
         {
             logger.Info("Service started!");
-
-
-
-            try
+            _timer = new System.Timers.Timer();
+            _timer.Interval = 10;
+            _timer.Elapsed += new ElapsedEventHandler(RemovePagesFromPdfAndMoveEvent);
+            _timer.AutoReset = true;
+            _timer.Enabled = true;
+            _timer.Start();
+        }
+        public void RemovePagesFromPdfAndMoveEvent(object sender, ElapsedEventArgs e)
+        {
+            // Prevents the job firing until it finishes its job 
+            if (Monitor.TryEnter(s_lock))
             {
-                var files = Directory.GetFiles(SourceDirectory, FilterFileType);
-                foreach (var path in files)
+
+                try
                 {
-                    RemovePages(path);
-                    FileInfo jsonFileInfo = new FileInfo(path);
-                    string tempPath = Path.Combine(DestinationDirectory, jsonFileInfo.Name);
-                    File.Move(Path.Combine(SourceDirectory, jsonFileInfo.Name.Replace(".json", ".pdf")), Path.Combine(DestinationDirectory, jsonFileInfo.Name.Replace(".json", ".pdf")));
-                    jsonFileInfo.MoveTo(tempPath);
+                    var files = Directory.GetFiles(SourceDirectory, FilterFileType);
+                    if (files.Length > 0)
+                    {
+                        foreach (var path in files)
+                        {
+                            RemovePages(path);
+                            FileInfo jsonFileInfo = new FileInfo(path);
+                            string tempPath = Path.Combine(DestinationDirectory, jsonFileInfo.Name);
+                            File.Move(Path.Combine(SourceDirectory, jsonFileInfo.Name.Replace(".json", ".pdf")), Path.Combine(DestinationDirectory, jsonFileInfo.Name.Replace(".json", ".pdf")));
+                            jsonFileInfo.MoveTo(tempPath);
+                        }
+                    }
+
+
                 }
-               
-            }
-            catch (Exception ex)
-            {
-                logger.Info("Exception " + ex);
-            }
-            finally
-            {
-                var watcher = new FileSystemWatcher(SourceDirectory);
-
-                watcher.NotifyFilter = NotifyFilters.Attributes
-                                     | NotifyFilters.CreationTime
-                                     | NotifyFilters.DirectoryName
-                                     | NotifyFilters.FileName
-                                     | NotifyFilters.LastAccess
-                                     | NotifyFilters.LastWrite
-                                     | NotifyFilters.Security
-                                     | NotifyFilters.Size;
-
-                watcher.Changed += OnChanged;
-                watcher.Created += OnCreated;
-                watcher.Renamed += OnRenamed;
-                watcher.Error += OnError;
-
-                watcher.Filter = FilterFileType;
-
-                watcher.IncludeSubdirectories = true;
-                watcher.EnableRaisingEvents = true;
-            }
-
-        }
-
-        private void OnError(object sender, ErrorEventArgs e)
-        {
-            logger.Info("Error " + e);
-        }
-
-        private void OnRenamed(object sender, RenamedEventArgs e)
-        {
-            try
-            {
-                RemovePagesAndMove(SourceDirectory, DestinationDirectory);
-            }
-            catch (Exception ex)
-            {
-                logger.Info("Exception " + ex);
-            }
-        }
-
-        private void OnCreated(object sender, FileSystemEventArgs e)
-        {
-            try
-            {
-                RemovePagesAndMove(SourceDirectory, DestinationDirectory);
-            }
-            catch (Exception ex)
-            {
-                logger.Info("Exception " + ex);
-            }
-        }
-
-        private void OnChanged(object sender, FileSystemEventArgs e)
-        {
-            try
-            {
-                RemovePagesAndMove(SourceDirectory, DestinationDirectory);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.Info("Exception " + ex);
-            }
-            catch (Exception ex)
-            {
-                logger.Info("Exception " + ex);
-            }
-        }
-        private void RemovePagesAndMove(string sourceDirectory, string destinationDirectory)
-        {
-            try
-            {
-                DirectoryInfo dir = new DirectoryInfo(sourceDirectory);
-
-                if (!dir.Exists)
+                catch (Exception ex)
                 {
-                    logger.Info("Source directory does not exist or could not be found: " + sourceDirectory);
-                    throw new DirectoryNotFoundException(
-                            "Source directory does not exist or could not be found: "
-                            + sourceDirectory);
+                    logger.Info("Exception " + ex);
                 }
+                finally
+                {
+                    // unlock the job 
+                    Monitor.Exit(s_lock);
 
-                Directory.CreateDirectory(destinationDirectory);
-
-                FileInfo[] files = dir.GetFiles(FilterFileType);
-
-                var file = files.OrderByDescending(f => f.LastWriteTime).First();
-
-                string tempSourcePath = Path.Combine(sourceDirectory, file.Name);
-                RemovePages(tempSourcePath);
-                string tempPath = Path.Combine(destinationDirectory, file.Name);
-                File.Move(Path.Combine(SourceDirectory, file.Name.Replace(".json", ".pdf")),Path.Combine(DestinationDirectory, file.Name.Replace(".json", ".pdf")));
-                file.MoveTo(tempPath);
+                }
             }
-            catch (Exception ex) {
-                logger.Info("Exception " + ex);
-            }
-
-
+            _timer.Interval = timerIntervalInMs;
         }
         private void RemovePages(string filePath)
         {
             try
             {
                 int[] pagesToRemove = ExtractPagesToRemove(filePath);
+                string jsonFilePath = filePath;
                 string pdfFilePath = filePath.Replace(".json", ".pdf");
-                if (File.Exists(pdfFilePath))
+                if (File.Exists(pdfFilePath) && pagesToRemove.Length>0)
                 {
 
                     FileInfo fileInfo = new FileInfo(pdfFilePath);
@@ -177,33 +101,68 @@ namespace RemovePagesFromPdfAndMoveService
                         inputDocument.Save(Path.Combine(SourceDirectory, fileInfo.Name.Replace(".json", ".pdf")));
                     }
                 }
+                ResetPagesFieldInJson(jsonFilePath);
+                
             }
             catch (Exception ex)
             {
                 logger.Info("Exception " + ex);
             }
-            
 
-            
+
+
+        }
+
+        public void ResetPagesFieldInJson(string jsonFilePath) {
+            try
+            {
+                string result;
+                using (StreamReader r = new StreamReader(jsonFilePath))
+                {
+                    string json = r.ReadToEnd();
+                    dynamic obj = JsonConvert.DeserializeObject<ExpandoObject>(json);
+                    obj.PagesToRemove = "";
+                    result = JsonConvert.SerializeObject(obj, Formatting.Indented);
+                }
+                if (result != null)
+                {
+                    using (FileStream fs = File.Create(jsonFilePath))
+                    {
+                        using (StreamWriter sr = new StreamWriter(fs)) {
+                            sr.Write(result);
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+
+            }
         }
         class PagesFromJson
         {
             public string PagesToRemove { get; set; }
         }
-        private int[] ExtractPagesToRemove(string filePath) {
-            
-                PagesFromJson pagesFromJson = new PagesFromJson();
-                using (StreamReader r = new StreamReader(filePath))
-                {
-                    string json = r.ReadToEnd();
-                    pagesFromJson = JsonConvert.DeserializeObject<PagesFromJson>(json);
-                }
-                string pagesToRemoveField = pagesFromJson.PagesToRemove;
+        private int[] ExtractPagesToRemove(string filePath)
+        {
+
+            PagesFromJson pagesFromJson = new PagesFromJson();
+            using (StreamReader r = new StreamReader(filePath))
+            {
+                string json = r.ReadToEnd();
+                pagesFromJson = JsonConvert.DeserializeObject<PagesFromJson>(json);
+            }
+            string pagesToRemoveField = pagesFromJson.PagesToRemove;
+            if (!String.IsNullOrEmpty(pagesToRemoveField))
+            {   
                 string[] result = pagesToRemoveField.Split(',');
                 return Array.ConvertAll(result, s => int.Parse(s));
             }
+            else return new int[0];
+        }
         public void Stop()
         {
+            _timer.Stop();
             logger.Info("Service stopped!");
         }
     }

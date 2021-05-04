@@ -8,13 +8,13 @@
 <h1>Data grid</h1>
 <RadzenGrid AllowSorting="true" Data="@pdfs" TItem="PdfDocument" AllowColumnResize="true">
     <Columns>
-        <RadzenGridColumn TItem="PdfDocument" Property="Id" Title="ID" />
+        <RadzenGridColumn TItem="PdfDocument" Property="Id" Title="ID" Width="250px"/>
         <RadzenGridColumn TItem="PdfDocument" Context="data" Property="FileName" Title="FileName">
             <Template>
-                <RadzenButton Text="@data.FileName" Click=@(args => ShowPdfDialog(data.PdfPath,data.FileName)) ButtonStyle="ButtonStyle.Light" Style="margin-bottom: 20px; width: 200px" />
+                <RadzenButton Text="@data.FileName" Click=@(args => ShowPdfDialog(data.PdfPath,data.FileName)) ButtonStyle="ButtonStyle.Light" Style="margin-bottom: 10px;margin-top:10px; width: 100%" />
             </Template>
         </RadzenGridColumn>
-        <RadzenGridColumn TItem="PdfDocument" Property="Date" Title="Date">
+        <RadzenGridColumn TItem="PdfDocument" Property="Date" Title="Date" Width="250px">
         </RadzenGridColumn>
     </Columns>
 </RadzenGrid>
@@ -27,7 +27,7 @@
     async Task ShowPdfDialog(string path,string fileName) => await DialogService.OpenAsync("Pdf Preview", ds =>
     @<div>
     <h3>Matching pattern: ***___*** founded on pages: @PdfPatternRecognitionTool.GetPagesWithPattern(@path)</h3>
-    @{string sourceDir = DocumentService.DirectoryFromConfigFile + fileName;
+    @{string sourceDir = String.Concat(DocumentService.DirectoryFromConfigFile, fileName);
     <iframe src="@sourceDir" style="width:48vw; height:80vh"></iframe>}
 </div>
     , new DialogOptions() { Width = $"{50}vw", Height = $"{95}vh" });

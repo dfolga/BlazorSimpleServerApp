@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using BlazorSimpleServerApp.Common;
+using Microsoft.AspNetCore.Hosting;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -15,8 +16,9 @@ namespace BlazorSimpleServerApp.Data
         private string  SourcePath { get; set; }
         public MoveAndMakeJsonService()
         {
-            SourcePath = @"\datagrid2_pdfs\";
-            DestinationPath = @"\datagrid2_result\";
+            var config = new Configuration().InitConfiguration();
+            SourcePath = config.GetSection("MoveMakeServiceSourcePath").Value;
+            DestinationPath = config.GetSection("MoveMakeServiceDestinationPath").Value;
         }
         public void MoveAndMakeJson(Attributes attributes,string wwwRootPath)
         {
@@ -37,22 +39,26 @@ namespace BlazorSimpleServerApp.Data
         {
             try
             {
-                string oldPath = wwwRootPath + SourcePath+ attributes.OldFileName;
-                string newPath = wwwRootPath + DestinationPath+ attributes.NewFileName;
-                File.Move(Path.Combine(wwwRootPath, oldPath), Path.Combine(wwwRootPath, newPath));
+                string oldPath = Path.Join(wwwRootPath, SourcePath, attributes.OldFileName);
+                string newPath = Path.Join(wwwRootPath, DestinationPath,attributes.NewFileName);
+                File.Move(oldPath, newPath);                
             }
             catch (Exception) { 
             }
             
         }
+        public bool FileAlreadyExists(string wwwRootPath, string newFileName) {
+            string newPath = Path.Join(wwwRootPath, DestinationPath, newFileName);
+            return File.Exists(newPath);
+        }
 
-       
+
         public void MakeJson(Attributes attributes, string wwwRootPath)
         {
             try
             {
                 
-                string path = wwwRootPath + DestinationPath + attributes.NewFileName.Replace(".pdf",".json");
+                string path = Path.Join(wwwRootPath, DestinationPath, attributes.NewFileName.Replace(".pdf", ".json"));
                 string json = JsonConvert.SerializeObject(attributes, Formatting.Indented);
                 using (FileStream fs = File.Create(path))
                 {
@@ -71,18 +77,34 @@ namespace BlazorSimpleServerApp.Data
         public Attributes JsonExtract(string fileName, string wwwRootPath)
         {
             Attributes result = new Attributes();
-            using (var sr = new StreamReader(wwwRootPath+SourcePath+ fileName.Replace(".pdf", ".json")))
-            {
-                var json=sr.ReadToEnd();
-                result=JsonConvert.DeserializeObject<Attributes>(json);
+            try {
+                using (var sr = new StreamReader(Path.Join(wwwRootPath, SourcePath, fileName.Replace(".pdf", ".json"))))
+                {
+                    var json = sr.ReadToEnd();
+                    result = JsonConvert.DeserializeObject<Attributes>(json);
+                }
             }
+            catch (Exception) { }
+            
             return result;
 
         }
         public bool HasJson(string fileName, string wwwRootPath)
         {
-            return (File.Exists(wwwRootPath + SourcePath + fileName.Replace(".pdf", ".json")));
+            return (File.Exists(Path.Join(wwwRootPath, SourcePath,fileName.Replace(".pdf", ".json"))));
         }
-
+        public void RemoveRedundantJsonFile(string fileName, string wwwRootPath) {
+            try
+            {
+                var pathToJson = Path.Join(wwwRootPath, SourcePath, fileName);
+                if (File.Exists(pathToJson))
+                {
+                    File.Delete(pathToJson);
+                }
+            }
+            catch (Exception) { 
+            
+            }
+        }
     }
 }
